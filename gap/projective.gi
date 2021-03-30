@@ -311,6 +311,10 @@ AddMethod(FindHomDbProjective, FindHomMethodsMatrix.ReducibleIso, 1200);
 
 AddMethod(FindHomDbProjective, FindHomMethodsProjective.NotAbsolutelyIrred, 1100);
 
+AddMethod(FindHomDbProjective, FindHomMethodsGeneric.SnAnSmallUnknownDegree, 1075);
+
+AddMethod(FindHomDbProjective, FindHomMethodsGeneric.SnAnUnknownDegree, 1070);
+
 AddMethod(FindHomDbProjective, FindHomMethodsProjective.ClassicalNatural, 1050);
 
 AddMethod(FindHomDbProjective, FindHomMethodsProjective.Subfield, 1000);
