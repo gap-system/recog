@@ -56,9 +56,11 @@ InstallGlobalFunction( "CallMethods", function(db, tolerancelimit, methargs...)
     # Second argument is a number, the tolerance limit.
     # All other arguments are handed through to the methods.
 
-    local i, ms, result, tolerance;
+    local ri, i, ms, result, tolerance;
 
     ms := rec(failedMethods := rec(), inapplicableMethods := rec());
+    ri := methargs[1];
+    Setfhmethsel(ri, ms);
 
     # Initialize record:
     tolerance := 0;    # reuse methods that failed that many times
@@ -137,5 +139,5 @@ InstallGlobalFunction( "CallMethods", function(db, tolerancelimit, methargs...)
     Info(InfoMethSel, 1, "Giving up!");
     ms.result := TemporaryFailure;
     ms.tolerance := tolerance;
-    return ms;
+    return;
 end);
