@@ -1,0 +1,31 @@
+# SnAnUnknownDegree
+
+This file describes details of the `SnAnUnknownDegree` implementation in `recog`. The algorithm is based on the paper `[JLNP13]`.
+
+## General Strategy
+Here we describe the general strategy that is used to recognise if a group is ismorphic to `An` or `Sn` for `n > 5`.
+
+We have to be careful what we do for small degrees.
+If we pass an `A5`, `S5`, `A6`, `S6` into `SnAnUnknownDegree`, then it will not recognize it.
+If the input acts on a space with a large dimension, then this can take forever.
+
+- We assume that our input group `G` is a projective irreducible matrix group.
+- First try to enumerate a single orbit with upper bound on its order `1440`.
+    - If we have found an orbit of size at most `1440`, we compute the action homomorphism induced by this orbit.
+    - Otherwise, if we find more than `1440` elements in an orbit, then we excluded `A5`, `S5`, `A6`, `S6`, `Aut(A6)` and continue.
+- Now we can assume for the degree `n >= 7`. We need to ensure this, since `SnAnUnknownDegree` cannot recognize these groups and could run for a considerable time.
+- Deduce an upper bound `N` for the degree of `An`, `Sn`.
+- Look at some orders and deduce a lower bound for the degree.
+    - If lower bound > upper bound, then we excluded `An`, `Sn`.
+    - Otherwise, we continue.
+- Monte-Carlo: Try to compute standard generators and degree `n` of largest `An < G` via the algorithm in `[JLNP13]`.
+- Try to compute an isomorphism from `G` to `An` or `Sn`.
+    - If `n < 11`, then use methods from Conder
+    - Otherwise, we have `n >= 11` and use methods from `SnAnKnownDegree` in `[BLGN+03]`
+
+## Changes
+Here we collect the changes in `SnAnUnknownDegree` compared to the "vanilla" implementation of the algorithm according to the paper `[JLNP13]`.
+
+- Computation of upper bound `N` done as in `[L84]` and `[KL90]`
+- For each ThreeCycleCandidate `c` we check if `c^3 = 1` and we check for some random elements `r` if `c * c^r` has order `1`, `2`, `3` or `5`.
+- Use Conder's Thesis to compute images for degree `n <= 10`
