@@ -1,111 +1,76 @@
-#@local d, sets, SdOn2Sets, ri, success, x, slp, db
 #
 # HACK to insert the method
-gap> AddMethod(FindHomDbPerm, FindHomMethodsGeneric.SnAnUnknownDegree, 58);;
-gap> AddMethod(FindHomDbMatrix, FindHomMethodsGeneric.SnAnUnknownDegree, 1070);;
-gap> AddMethod(FindHomDbProjective, FindHomMethodsGeneric.SnAnUnknownDegree, 1220);;
+gap> AddMethod(FindHomDbPerm, FindHomMethodsGeneric.SnAnSmallUnknownDegree, 58);;
+gap> AddMethod(FindHomDbPerm, FindHomMethodsGeneric.SnAnUnknownDegree, 57);;
 
 # For each entry (d, k) we construct Sym(d)/Alt(d) acting on k-sets.
 # For each entry (d, k), we must have 2 * k ^ 2 > d,
 # otherwise LargeBasePrimitive recognises the group instead of SnAnUnknownDegree.
-gap> data := [[7, 2], [8, 3], [9, 3], [10, 3], [11, 3], [12, 3], [13, 3]];;
-
-# TODO: make sure we really use everything
-# SymmetricGroup action on k-sets
-gap> SymOnKSets := function(d, k)
->     local sets;
->     sets := Combinations([1 .. d], k);;
->     return Action(SymmetricGroup(d), sets, OnSets);;
-> end;;
+gap> dataPerm := [[7, 2], [8, 3], [9, 3], [10, 3], [11, 3], [12, 3], [13, 3]];;
 
 #
-# AlternatingGroup action on 2-sets
+# PermGroup action on k-sets
+gap> PermOnKSets := function(G, k)
+>     local sets;
+>     sets := Combinations([1 .. NrMovedPoints(G)], k);;
+>     return Action(G, sets, OnSets);;
+> end;;
 gap> AltOnKSets := function(d, k)
->     local sets;
->     sets := Combinations([1 .. d], k);;
->     return Action(AlternatingGroup(d), sets, OnSets);;
+>     return PermOnKSets(AlternatingGroup(d), k);
+> end;;
+gap> SymOnKSets := function(d, k)
+>     return PermOnKSets(SymmetricGroup(d), k);
 > end;;
 
 #
-gap> altGroups := List(data, entry -> AltOnKSets(entry[1], entry[2]));;
-gap> symGroups := List(data, entry -> SymOnKSets(entry[1], entry[2]));;
-gap> permMatGroup := function(G, q) return Group(List(
+gap> altPermGroups := List(dataPerm, entry -> AltOnKSets(entry[1], entry[2]));;
+gap> symPermGroups := List(dataPerm, entry -> SymOnKSets(entry[1], entry[2]));;
+
+#
+gap> dataMat := [[7, 3], [8, 5], [11, 7]];;
+
+#
+# Permutation Matrix Group
+gap> PermMatGroup := function(G, q) return Group(List(
 >     GeneratorsOfGroup(G),
 >     x -> ImmutableMatrix(q, PermutationMat(x, NrMovedPoints(G), GF(q)))
 > )); end;;
-gap> altMatGroups := [
->     permMatGroup(AlternatingGroup(11), 7),
->     #permMatGroup(AlternatingGroup(5), 7^3),
-> ];;
+gap> AltMatGroup := function(n, q) return PermMatGroup(AlternatingGroup(n), q);
+> end;;
+gap> SymMatGroup := function(n, q) return PermMatGroup(SymmetricGroup(n), q);
+> end;;
+
+#
+gap> altMatGroups := List(dataMat, entry -> AltMatGroup(entry[1], entry[2]));;
+gap> symMatGroups := List(dataMat, entry -> SymMatGroup(entry[1], entry[2]));;
+
+#
 gap> nonAltOrSymGroups := [
->     DihedralGroup(IsPermGroup, 10),
->     #DihedralGroup(IsPcGroup, 10),
->     #DihedralGroup(IsPermGroup, 2000),
->     #DihedralGroup(IsPcGroup, 2000),
 >     PSL(3, 5),
 >     SL(3, 5),
->     Omega(-1, 4, 5),
->     Omega(-1, 4, 3),
->     Omega(+1, 4, 5),
->     Omega(+1, 4, 3),
->     Omega(+1, 8, 5),
->     Omega(+1, 8, 3),
->     Omega(0, 5, 5),
->     Omega(0, 5, 3),
 > ];;
 
 # Test
-gap> for i in [1 .. Length(data)] do
->     RECOG.TestGroup(altGroups[i], false, Factorial(data[i, 1])/2, rec(), "SnAnUnknownDegree");
->     RECOG.TestGroup(symGroups[i], false, Factorial(data[i, 1]), rec(), "SnAnUnknownDegree");
+gap> for i in [1 .. Length(dataPerm)] do
+>     RECOG.TestGroup(altPermGroups[i], false, Factorial(dataPerm[i, 1])/2, rec());
+>     RECOG.TestGroup(symPermGroups[i], false, Factorial(dataPerm[i, 1]), rec());
 > od;
-gap> for i in [1 .. Length(altMatGroups)] do
->     RECOG.TestGroup(altMatGroups[i], false, Size(altMatGroups[i]));
-> od;
-gap> for i in [1 .. Length(altMatGroups)] do
->     RECOG.TestGroup(altMatGroups[i], true, Size(altMatGroups[i]));
+gap> for i in [1 .. Length(dataMat)] do
+>     RECOG.TestGroup(altMatGroups[i], false, Factorial(dataMat[i, 1])/2, rec());
+>     RECOG.TestGroup(symMatGroups[i], false, Factorial(dataMat[i, 1]), rec());
 > od;
 gap> for i in [1 .. Length(nonAltOrSymGroups)] do
->     if FindHomMethodsGeneric.SnAnUnknownDegree(RecogNode(nonAltOrSymGroups[i]), nonAltOrSymGroups[i]) = Success then
+>     ri := RecogNode(nonAltOrSymGroups[i]);
+>     if FindHomMethodsGeneric.SnAnUnknownDegree(ri, nonAltOrSymGroups[i]) = Success then
 >         Print("ERROR: Recognised group [", i, "] wrongly as Sn/An!\n");
 >     fi;
 > od;
 
-# FindHomMethodsGeneric.SnAnUnknownDegree
-# Sn
-gap> for d in [11] do
-> sets := Combinations([1 .. d], 2);;
-> SdOn2Sets := Action(SymmetricGroup(d), sets, OnSets);;
-> ri := RecogNode(SdOn2Sets);;
-> success := FindHomMethodsGeneric.SnAnUnknownDegree(ri, SdOn2Sets);
-> if not success or not Size(ri) = Factorial(d) then
->   Print("wrong result! degree ", d, "\n");
-> fi;
-> od;
-
-# An
-gap> for d in [11] do
-> sets := Combinations([1 .. d], 2);;
-> SdOn2Sets := Action(AlternatingGroup(d), sets, OnSets);;
-> ri := RecogNode(SdOn2Sets);;
-> success := FindHomMethodsGeneric.SnAnUnknownDegree(ri, SdOn2Sets);
-> if not success or not Size(ri) = Factorial(d)/2 then
->   Print("wrong result! degree ", d, "\n");
-> fi;
-> od;
-
-# Check Slp function
-gap> ri := RecogNode(SdOn2Sets);;
-gap> FindHomMethodsGeneric.SnAnUnknownDegree(ri, SdOn2Sets);
-true
-gap> x := PseudoRandom(Grp(ri));;
-gap> slp := SLPforElement(ri, x);;
-gap> x = ResultOfStraightLineProgram(slp, NiceGens(ri));
-true
-
 #
 # Remove Hacky injection of our method
-gap> for db in [FindHomDbPerm, FindHomDbMatrix, FindHomDbProjective] do
+gap> for db in [FindHomDbPerm] do
+>       Remove(db,
+>              PositionProperty(db, x -> Stamp(x.method) = "SnAnSmallUnknownDegree"));;
 >       Remove(db,
 >              PositionProperty(db, x -> Stamp(x.method) = "SnAnUnknownDegree"));;
 > od;
