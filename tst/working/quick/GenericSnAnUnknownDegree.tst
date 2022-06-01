@@ -1,12 +1,11 @@
 #
 # HACK to insert the method
-gap> AddMethod(FindHomDbPerm, FindHomMethodsGeneric.SnAnSmallUnknownDegree, 58);;
-gap> AddMethod(FindHomDbPerm, FindHomMethodsGeneric.SnAnUnknownDegree, 57);;
+gap> AddMethod(FindHomDbPerm, FindHomMethodsGeneric.SnAnUnknownDegree, 58);;
 
 # For each entry (d, k) we construct Sym(d)/Alt(d) acting on k-sets.
 # For each entry (d, k), we must have 2 * k ^ 2 > d,
 # otherwise LargeBasePrimitive recognises the group instead of SnAnUnknownDegree.
-gap> dataPerm := [[7, 2], [8, 3], [9, 3], [10, 3], [11, 3], [12, 3], [13, 3]];;
+gap> dataPerm := [[5, 2], [7, 2], [8, 3], [9, 3], [10, 3], [11, 3], [12, 3], [13, 3]];;
 
 #
 # PermGroup action on k-sets
@@ -27,7 +26,7 @@ gap> altPermGroups := List(dataPerm, entry -> AltOnKSets(entry[1], entry[2]));;
 gap> symPermGroups := List(dataPerm, entry -> SymOnKSets(entry[1], entry[2]));;
 
 #
-gap> dataMat := [[7, 3], [8, 5], [11, 7]];;
+gap> dataMat := [[5, 4], [7, 3], [8, 5], [11, 7]];;
 
 #
 # Permutation Matrix Group
@@ -48,6 +47,7 @@ gap> symMatGroups := List(dataMat, entry -> SymMatGroup(entry[1], entry[2]));;
 gap> nonAltOrSymGroups := [
 >     PSL(3, 5),
 >     SL(3, 5),
+>     Omega(1, 4, 3),
 > ];;
 
 # Test
@@ -61,7 +61,7 @@ gap> for i in [1 .. Length(dataMat)] do
 > od;
 gap> for i in [1 .. Length(nonAltOrSymGroups)] do
 >     ri := RecogNode(nonAltOrSymGroups[i]);
->     if FindHomMethodsGeneric.SnAnUnknownDegree(ri, nonAltOrSymGroups[i]) = Success then
+>     if FindHomMethodsGeneric.SnAnUnknownDegree(ri, Grp(ri)) = Success then
 >         Print("ERROR: Recognised group [", i, "] wrongly as Sn/An!\n");
 >     fi;
 > od;
@@ -69,8 +69,6 @@ gap> for i in [1 .. Length(nonAltOrSymGroups)] do
 #
 # Remove Hacky injection of our method
 gap> for db in [FindHomDbPerm] do
->       Remove(db,
->              PositionProperty(db, x -> Stamp(x.method) = "SnAnSmallUnknownDegree"));;
 >       Remove(db,
 >              PositionProperty(db, x -> Stamp(x.method) = "SnAnUnknownDegree"));;
 > od;

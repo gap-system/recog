@@ -929,36 +929,35 @@ RECOG.RecogniseSnAn := function(ri, eps, N)
     return TemporaryFailure;
 end;
 
-
-#! @BeginChunk SnAnSmallUnknownDegree
-#! This method checks element orders to rule out whether the input group might
-#! be A_5, S_5, A_6, S_6, or Aut(A_6). If it wasn't able to rule that out it
-#! tries to find a small orbit, which must exist if the input group is
-#! isomorphic to one of the groups in question.
-#! This method only takes matrix or projective inputs.
-#! @EndChunk SnAnSmallUnknownDegree
-BindRecogMethod(FindHomMethodsGeneric, "SnAnSmallUnknownDegree",
-"find small orbit if the group might be A_5, S_5, A_6, S_6, or Aut(A_6)",
-function(ri, G)
-    local orders, orbit;
-    orders := Set(List(
-        [1..30],
-        i -> RandomElmOrd(ri, "SnAnSmallUnknownDegree", false).order
-    ));
-    # Orders which are not in Aut(A_6):
-    if ForAny(orders, x -> x >= 11) or 7 in orders or 9 in orders then
-        return NeverApplicable;
-    fi;
-    orbit := Orb(G, One(G)[1], OnPoints, rec(storenumbers := true));
-    Enumerate(orbit, 1441);
-    if Length(orbit) <= 1440 then
-        # Our reduction is that we found a smallish orbit.
-        SetHomom(ri, OrbActionHomomorphism(G, orbit));
-        Setmethodsforimage(ri, FindHomDbPerm);
-        return Success;
-    fi;
-    return NeverApplicable;
-end);
+# #! @BeginChunk SnAnSmallUnknownDegree
+# #! This method checks element orders to rule out whether the input group might
+# #! be A_5, S_5, A_6, S_6, or Aut(A_6). If it wasn't able to rule that out it
+# #! tries to find a small orbit, which must exist if the input group is
+# #! isomorphic to one of the groups in question.
+# #! This method only takes matrix or projective inputs.
+# #! @EndChunk SnAnSmallUnknownDegree
+# BindRecogMethod(FindHomMethodsGeneric, "SnAnSmallUnknownDegree",
+# "find small orbit if the group might be A_5, S_5, A_6, S_6, or Aut(A_6)",
+# function(ri, G)
+#     local orders, orbit;
+#     orders := Set(List(
+#         [1..30],
+#         i -> RandomElmOrd(ri, "SnAnSmallUnknownDegree", false).order
+#     ));
+#     # Orders which are not in Aut(A_6):
+#     if ForAny(orders, x -> x >= 11) or 7 in orders or 9 in orders then
+#         return NeverApplicable;
+#     fi;
+#     orbit := Orb(G, One(G)[1], OnPoints, rec(storenumbers := true));
+#     Enumerate(orbit, 1441);
+#     if Length(orbit) <= 1440 then
+#         # Our reduction is that we found a smallish orbit.
+#         SetHomom(ri, OrbActionHomomorphism(G, orbit));
+#         Setmethodsforimage(ri, FindHomDbPerm);
+#         return Success;
+#     fi;
+#     return NeverApplicable;
+# end);
 
 RECOG.LowerBoundForDegreeOfSnAnViaOrders := function(ri)
     local G, orders;
@@ -994,22 +993,20 @@ end;
 #! <M>n = 5</M> or <M>n = 6</M>, since it uses pre-bolstering elements,
 #! which need at least 7 moved points.
 #! If the input group is isomorphic to a symmetric or alternating group of
-#! degrees 5 or 6, then this method might not exit quickly. Thus it is
-#! recommended to first call the method
-#! <Ref Subsect="SnAnSmallUnknownDegree" Style="Text"/>.
+#! degrees 5 or 6, then this method might not exit quickly.
 #!
 #! @EndChunk
 BindRecogMethod(FindHomMethodsGeneric, "SnAnUnknownDegree",
 "method groups isomorphic to Sn or An with n >= 9",
 function(ri, G)
-    local eps, N, p, d, recogData, isoData, degree, swapSLP;
-    if IsBound(ri!.fhmethsel) and not "SnAnSmallUnknownDegree"
-            in NamesOfComponents(ri!.fhmethsel.inapplicableMethods) then
-        ErrorNoReturn("If called via CallMethods then SnAnSmallUnknownDegree must be tried before ",
-                      "SnAnUnknownDegree.");
-    fi;
-    # TODO find value for eps
+    local eps, N, M, p, d, recogData, isoData, degree, swapSLP;
+    # if IsBound(ri!.fhmethsel) and not "SnAnSmallUnknownDegree"
+    #         in NamesOfComponents(ri!.fhmethsel.inapplicableMethods) then
+    #     ErrorNoReturn("If called via CallMethods then SnAnSmallUnknownDegree must be tried before ",
+    #                   "SnAnUnknownDegree.");
+    # fi;
     eps := 1 / 10^2;
+    # N = upper bound for degree
     # Check magma
     if IsPermGroup(G) then
         # We assume that G is primitive and not a giant.
@@ -1052,9 +1049,17 @@ function(ri, G)
                            " <N>, Grp(<ri>) must be an IsPermGroup or an",
                            " IsMatrixGroup");
     fi;
+    # N = lower bound for degree
+    M := RECOG.LowerBoundForDegreeOfSnAnViaOrders(ri);
     # Our upper bound is smaller than our lower bound.
-    if N < RECOG.LowerBoundForDegreeOfSnAnViaOrders(ri) then
+    if N < M then
         return NeverApplicable;
+    fi;
+    # Lower bound does not exclude A5, S5, A6 or S6
+    # If the input group is isomorphic to a symmetric or alternating group of
+    # degrees 5 or 6, then this method might not exit quickly.
+    if M <= 6 then
+        return TemporaryFailure;
     fi;
     # Try to find an isomorphism
     recogData := RECOG.RecogniseSnAn(ri, eps, N);
