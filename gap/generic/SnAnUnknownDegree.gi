@@ -1202,16 +1202,18 @@ function(ri, G)
     #                   "SnAnUnknownDegree.");
     # fi;
     eps := 1 / 10^2;
-    # N := RECOG.SnAnUpperBoundForDegree(ri);
-    # if not IsInt(N) then
-    #     return N;
-    # fi;
-    # This is usually much smaller than RECOG.SnAnUpperBoundForDegree
-    degreeData := RECOG.GuessSnAnDegree(ri);
-    if degreeData = fail then
-        return TemporaryFailure;
+    N := RECOG.SnAnUpperBoundForDegree(ri);
+    if not IsInt(N) then
+        return N;
     fi;
-    N := degreeData.degree;
+    # This is usually much smaller than RECOG.SnAnUpperBoundForDegree
+    if N > 20 then
+        degreeData := RECOG.GuessSnAnDegree(ri);
+        if degreeData = fail then
+            return TemporaryFailure;
+        fi;
+        N := Minimum(N, degreeData.degree);
+    fi;
     # Try to find an isomorphism
     recogData := RECOG.RecogniseSnAn(ri, eps, N);
     # RECOG.RecogniseSnAn returned NeverApplicable or TemporaryFailure
