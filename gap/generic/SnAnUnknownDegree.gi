@@ -43,14 +43,14 @@ end;
 
 # Return false if c can not be a three cycle. This uses cheap tests to
 # determine this. It is based on the Magma function heuristicThreeCycleTest.
-RECOG.HeuristicThreeCycleTest := function(ri, c, logInt2N)
+RECOG.HeuristicThreeCycleTest := function(ri, c, logInt2N, R)
     local r, y, yTo5, k;
     c := StripMemory(c);
     if not isone(ri)(c ^ 3) then
         return false;
     fi;
     for k in [1 .. logInt2N + 1] do
-        r := StripMemory(PseudoRandom(Grp(ri))); # TODO: Replace PseudoRandom
+        r := R[k];
         # c * c ^ r is a product of two three-cycles, so it should have order
         # 1, 2, 3 or 5.
         y := c * c ^ r;
@@ -82,6 +82,8 @@ RECOG.ThreeCycleCandidatesIterator := function(ri, constants)
         t,
         # integers, controlling the number of iterations
         M, B, T, C, logInt2N,
+        # list of random elements for heuristic three cycle test
+        R,
         # counters
         nrInvolutions, nrTriedConjugates, nrThreeCycleCandidates,
         # helper functions
@@ -95,6 +97,8 @@ RECOG.ThreeCycleCandidatesIterator := function(ri, constants)
     T := constants.T;
     C := constants.C;
     logInt2N := constants.logInt2N;
+
+    R := List([1 .. logInt2N + 1], k -> StripMemory(RandomElm(ri, "SnAnUnknownDegree", true)!.el));
 
     # Counters
     # Counts the constructed involutions t_i in steps 2 & 3.
@@ -162,7 +166,7 @@ RECOG.ThreeCycleCandidatesIterator := function(ri, constants)
         # three cycle, that is the heuristic can detect whether candidate can
         # not be a three cycle, e.g. if it does not have order three.
         nrThreeCycleCandidates := nrThreeCycleCandidates + 1;
-        if RECOG.HeuristicThreeCycleTest(ri, candidate, logInt2N) then
+        if RECOG.HeuristicThreeCycleTest(ri, candidate, logInt2N, R) then
             return candidate;
         else
             return fail;
