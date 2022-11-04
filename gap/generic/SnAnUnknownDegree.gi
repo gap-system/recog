@@ -18,6 +18,22 @@
 ##
 #############################################################################
 
+RECOG.SnAnDebug := false;
+
+BindGlobal("SnAnTryLater", MakeImmutable("SnAnTryLater"));
+BindGlobal("SnAnRepeatImmediately", MakeImmutable("SnAnRepeatImmediately"));
+
+RECOG.SnAnGetCache := function(ri)
+    if not IsBound(ri!.SnAnUnknownDegreeCache) then
+        ri!.SnAnUnknownDegreeCache := rec();
+    fi;
+    return ri!.SnAnUnknownDegreeCache;
+end;
+
+RECOG.SnAnResetCache := function(ri)
+    ri!.SnAnUnknownDegreeCache := rec();
+end;
+
 # eps : real number, the error bound
 # N : integer, upper bound for the degree of G
 #
@@ -72,6 +88,7 @@ end;
 # Creates and returns a function, here called oneThreeCycleCandidate. The
 # function oneThreeCycleCandidate returns one of the following:
 # - a three cycle candidate, i.e. an element of G
+# - SnAnTryLater, if we tried all involution candidates K times
 # - TemporaryFailure, if we exhausted all attempts
 # - NeverApplicable, if we found out that G can't be an Sn or An
 #
@@ -81,41 +98,61 @@ RECOG.ThreeCycleCandidatesIterator := function(ri, constants)
         # involution
         t,
         # integers, controlling the number of iterations
-        M, B, T, C, logInt2N,
+        M, B, T, C, logInt2N, K,
         # list of random elements for heuristic three cycle test
         R,
+        # list of involution candidates
+        involutions,
         # counters
-        nrInvolutions, nrTriedConjugates, nrThreeCycleCandidates,
+        nrTriedConjugates, nrThreeCycleCandidates,
+        # counters
+        Ki, curInvolutionPos,
         # helper functions
-        tryThreeCycleCandidate, oneThreeCycleCandidate;
+        tryThreeCycleCandidate, oneThreeCycleCandidate,
+        # used for debugging
+        cache;
     # Step 1: Initialization
-    # The current involution t_i
-    t := fail;
-
     M := constants.M;
     B := constants.B;
     T := constants.T;
     C := constants.C;
     logInt2N := constants.logInt2N;
+    K := 5;
+    # list containing the constructed involutions t_i in steps 2 & 3
+    involutions := EmptyPlist(B);
 
     R := List([1 .. logInt2N + 1], k -> StripMemory(RandomElm(ri, "SnAnUnknownDegree", true)!.el));
 
     # Counters
-    # Counts the constructed involutions t_i in steps 2 & 3.
-    nrInvolutions := 0;
+    curInvolutionPos := 1;
+    Ki := Minimum(K, C);
     # Counts the elements c in step 4 that we use to conjugate the current
     # involution t_i.  We initialize nrTriedConjugates to C such that "steps 2
     # & 3" in tryThreeCycleCandidate immediately construct an involution.
-    nrTriedConjugates := C;
+    nrTriedConjugates := [];
     # counts the size of the set Gamma_i in step 4 for the current involution
     # t_i
-    nrThreeCycleCandidates := 0;
+    nrThreeCycleCandidates := [];
+
+    # Used for Debugging
+    if RECOG.SnAnDebug then
+        cache := RECOG.SnAnGetCache(ri);
+        if not IsBound(cache.iteratorsLocalVars) then
+            cache.iteratorsLocalVars := [];
+        fi;
+        Add(cache.iteratorsLocalVars, rec(
+            involutions := involutions,
+            nrTriedConjugates := nrTriedConjugates,
+            nrThreeCycleCandidates := nrThreeCycleCandidates
+        ));
+    fi;
 
     # Helper functions
     # tryThreeCycleCandidate returns one of the following:
     # - a three cycle candidate, i.e. an element of G
-    # - fail, if the random conjugate c from step 4 and t commute. Then we have
-    #   to call tryThreeCycleCandidate again
+    # - TemporaryFailure, if we exhausted all attempts
+    # - SnAnTryLater, if we tried all involution candidates K times
+    # - SnAnRepeatImmediately, if we have to call tryThreeCycleCandidate again
     # - NeverApplicable, if G can not be an Sn or An
     tryThreeCycleCandidate := function()
         local
@@ -125,11 +162,9 @@ RECOG.ThreeCycleCandidatesIterator := function(ri, constants)
             r, tPower, tPowerOld, c,
             # the three cycle candidate
             candidate;
+
         # Steps 2 & 3: New involution
-        # Check if we either tried enough conjugates or constructed enough
-        # three cycle candidates for the current involution t.
-        # If this is the case, we need to construct the next involution
-        if nrTriedConjugates >= C or nrThreeCycleCandidates >= T then
+        if curInvolutionPos > Length(involutions) then
             r := RandomElm(ri, "SnAnUnknownDegree", true)!.el;
             # In the paper, we have t = r ^ M.
             # Invariant: tPower = (r ^ M) ^ (2 ^ a)
@@ -147,50 +182,80 @@ RECOG.ThreeCycleCandidatesIterator := function(ri, constants)
             if not isone(ri)(tPower) then
                 return NeverApplicable;
             fi;
-            t := tPowerOld;
-            nrInvolutions := nrInvolutions + 1;
-            nrTriedConjugates := 0;
-            nrThreeCycleCandidates := 0;
+            involutions[curInvolutionPos] := tPowerOld;
+            nrTriedConjugates[curInvolutionPos] := 0;
+            nrThreeCycleCandidates[curInvolutionPos] := 0;
+        fi;
+        # Check if we either tried enough conjugates or constructed enough
+        # three cycle candidates for the current involution t.
+        # If this is the case, we need to construct the next involution,
+        # or we have exhausted all attempts
+        if curInvolutionPos = B
+            and (nrTriedConjugates[B] >= C or nrThreeCycleCandidates[B] >= T)
+        then
+            return TemporaryFailure;
+        fi;
+        if nrThreeCycleCandidates[curInvolutionPos] >= T then
+            curInvolutionPos := curInvolutionPos + 1;
+            return SnAnRepeatImmediately;
+        fi;
+        if nrTriedConjugates[curInvolutionPos] >= Ki then
+            if curInvolutionPos = B then
+                Ki := Ki + K;
+                Ki := Minimum(Ki, C);
+                curInvolutionPos := 1;
+                return SnAnTryLater;
+            else
+                curInvolutionPos := curInvolutionPos + 1;
+                return SnAnRepeatImmediately;
+            fi;
         fi;
         # Steps 4 & 5: new three cycle candidate
         # Try to construct a three cycle candidate via a conjugate of t. See
         # the comment above this function.
-        nrTriedConjugates := nrTriedConjugates + 1;
+        t := involutions[curInvolutionPos];
+        nrTriedConjugates[curInvolutionPos] := nrTriedConjugates[curInvolutionPos] + 1;
         c := t ^ RandomElm(ri, "SnAnUnknownDegree", true)!.el;
         if isequal(ri)(t * c, c * t) then
             # we have to call tryThreeCycleCandidate again
-            return fail;
+            return SnAnRepeatImmediately;
         fi;
         candidate := (t * c) ^ 2;
         # We now use a one-sided heuristic to test whether candidate can be a
         # three cycle, that is the heuristic can detect whether candidate can
         # not be a three cycle, e.g. if it does not have order three.
-        nrThreeCycleCandidates := nrThreeCycleCandidates + 1;
+        nrThreeCycleCandidates[curInvolutionPos] := nrThreeCycleCandidates[curInvolutionPos] + 1;
         if RECOG.HeuristicThreeCycleTest(ri, candidate, logInt2N, R) then
             return candidate;
         else
-            return fail;
+            return SnAnRepeatImmediately;
         fi;
     end;
+
     # construct the iterator
     oneThreeCycleCandidate := function()
         local candidate;
         repeat
-            if nrInvolutions >= B
-                and (nrTriedConjugates >= C or nrThreeCycleCandidates >= T)
-            then
-                # With probability at least 1 - eps we constructed at least one
-                # three cycle with this iterator.
-                return fail;
-            fi;
             candidate := tryThreeCycleCandidate();
-            if candidate = NeverApplicable then
-                return NeverApplicable;
-            fi;
-        until candidate <> fail;
+        until candidate <> SnAnRepeatImmediately;
+        # With probability at least 1 - eps we constructed at least one
+        # three cycle with this iterator.
         return candidate;
     end;
+
     return oneThreeCycleCandidate;
+end;
+
+RECOG.SnAnCacheIterators := function(ri, T, N)
+    local cache, constants;
+    cache := RECOG.SnAnGetCache(ri);
+    if not IsBound(cache.iterators) then
+        constants := RECOG.ThreeCycleCandidatesConstants(1 / 4., N);
+        if RECOG.SnAnDebug then
+            cache.constants := constants;
+        fi;
+        cache.iterators := List([1 .. T], i -> RECOG.ThreeCycleCandidatesIterator(ri, constants));
+    fi;
 end;
 
 # ri : recognition node with group G
@@ -891,25 +956,30 @@ RECOG.ConstructSnAnIsomorphism := function(ri, n, stdGensAnWithMemory)
                slpToStdGens := SLPOfElms(stdGensSnWithMemory));
 end;
 
-# This method is an implementation of <Cite Key="JLNP13"/>. It is the main
-# function of SnAnUnknownDegree.
-# From <Cite Key="JLNP13" Where="Theorem 1.1"/>:
-# RECOG.RecogniseSnAn is a one-sided Monte-Carlo algorithm with the following
-# properties. It takes as input a black-box group <A>G</A>, a natural number
-# <A>N</A> and a real number <A>eps</A> with 0 < <A>eps</A> < 1. If <A>G</A> is
-# isomorphic to An or Sn for some 9 <= <A>n</A> <= <A>N</A>, it returns with
-# probability at least 1 - <A>eps</A> the degree <A>n</A> and an
-# isomorphism from <A>G</A> to An or Sn.
-RECOG.RecogniseSnAn := function(ri, eps, N)
-    local T, foundPreImagesOfStdGens, constants, iterator, c, tmp, recogData, i;
-    T := Int(Ceil(Log2(1 / Float(eps))));
-    foundPreImagesOfStdGens := false;
-    constants := RECOG.ThreeCycleCandidatesConstants(1. / 4., N);
-    for i in [1 .. T] do
-        iterator := RECOG.ThreeCycleCandidatesIterator(ri, constants);
+# ri : recognition node with group G,
+# T : integer, number of iterators
+# N : integer, upper bound for the degree of G
+#
+# This is the main method used by RECOG.RecogniseSnAn and RECOG.RecogniseSnAnLazy.
+#
+# This function returns one of the following:
+# - an isomorphism from G to Sn or An
+# - SnAnTryLater, if we should try this method at a later point again
+# - TemporaryFailure, if we exhausted all attempts
+# - NeverApplicable, if we found out that G can't be an Sn or An
+RECOG.RecogniseSnAnSingleIteration := function(ri, T, N)
+    local cache, iterators, iterator, c, tmp, recogData;
+    cache := RECOG.SnAnGetCache(ri);
+    RECOG.SnAnCacheIterators(ri, T, N);
+    iterators := cache.iterators;
+    # each iterator succeeds with probability at least 1/2,
+    # if we exhaust all attempts
+    for iterator in iterators do
         c := iterator();
-        while c <> fail do
-            if c = NeverApplicable then return NeverApplicable; fi;
+        while not c in [SnAnTryLater, TemporaryFailure] do
+            if c = NeverApplicable then
+                return c;
+            fi;
             tmp := RECOG.ConstructLongCycle(ri, c, 1. / 8., N);
             if tmp = fail then
                 c := iterator();
@@ -926,42 +996,32 @@ RECOG.RecogniseSnAn := function(ri, eps, N)
             # Now tmp contains [g, c, n] where
             #   g, c correspond to standard generators of An
             recogData := RECOG.ConstructSnAnIsomorphism(ri, tmp[3], tmp{[1,2]});
-            if recogData = fail then continue; fi;
+            if recogData = fail then
+                continue;
+            fi;
             return recogData;
         od;
     od;
-    return TemporaryFailure;
+    return c;
 end;
 
-# #! @BeginChunk SnAnSmallUnknownDegree
-# #! This method checks element orders to rule out whether the input group might
-# #! be A_5, S_5, A_6, S_6, or Aut(A_6). If it wasn't able to rule that out it
-# #! tries to find a small orbit, which must exist if the input group is
-# #! isomorphic to one of the groups in question.
-# #! This method only takes matrix or projective inputs.
-# #! @EndChunk SnAnSmallUnknownDegree
-# BindRecogMethod(FindHomMethodsGeneric, "SnAnSmallUnknownDegree",
-# "find small orbit if the group might be A_5, S_5, A_6, S_6, or Aut(A_6)",
-# function(ri, G)
-#     local orders, orbit;
-#     orders := Set(List(
-#         [1..30],
-#         i -> RandomElmOrd(ri, "SnAnSmallUnknownDegree", false).order
-#     ));
-#     # Orders which are not in Aut(A_6):
-#     if ForAny(orders, x -> x >= 11) or 7 in orders or 9 in orders then
-#         return NeverApplicable;
-#     fi;
-#     orbit := Orb(G, One(G)[1], OnPoints, rec(storenumbers := true));
-#     Enumerate(orbit, 1441);
-#     if Length(orbit) <= 1440 then
-#         # Our reduction is that we found a smallish orbit.
-#         SetHomom(ri, OrbActionHomomorphism(G, orbit));
-#         Setmethodsforimage(ri, FindHomDbPerm);
-#         return Success;
-#     fi;
-#     return NeverApplicable;
-# end);
+# This method is an implementation of <Cite Key="JLNP13"/>.
+# From <Cite Key="JLNP13" Where="Theorem 1.1"/>:
+# RECOG.RecogniseSnAn is a one-sided Monte-Carlo algorithm with the following
+# properties. It takes as input a black-box group <A>G</A>, a natural number
+# <A>N</A> and a real number <A>eps</A> with 0 < <A>eps</A> < 1. If <A>G</A> is
+# isomorphic to An or Sn for some 9 <= <A>n</A> <= <A>N</A>, it returns with
+# probability at least 1 - <A>eps</A> the degree <A>n</A> and an
+# isomorphism from <A>G</A> to An or Sn.
+RECOG.RecogniseSnAn := function(ri, eps, N)
+    local T, tmp;
+    T := Int(Ceil(Log2(1 / Float(eps))));
+    tmp := SnAnTryLater;
+    while tmp = SnAnTryLater do
+        tmp := RECOG.RecogniseSnAnSingleIteration(ri, T, N);
+    od;
+    return tmp;
+end;
 
 RECOG.LowerBoundForDegreeOfSnAnViaOrders := function(ri)
     local G, orders;
@@ -1001,7 +1061,6 @@ end;
 # "Fast Constructive Recognition of a Black Box Group Isomorphic to Sn or An using Goldbach’s Conjecture"
 # by Sergey Bratus and Igor Pak,
 # in Chapter 9. "What To Do If n is Not Known?"
-
 RECOG.GuessSnAnDegree := function(ri, optionlist...)
     local G, r, options, mintries, maxtries, fac, mindego, mindege, ct, cto, cte, proc, g, o, mindeg, o_fact, mindegforg;
     # mindego and mindege will be respectively the smallest possible
@@ -1054,7 +1113,7 @@ RECOG.GuessSnAnDegree := function(ri, optionlist...)
         # The situation mindego = mindege+1 was responsible for most errors
         # in the first version! Alt(n+1) was returned instead of Sym(n).
         g := RandomElm(ri, "GuessSnAnDegree", false)!.el;;
-        o := ri!.order(g);
+        o := OrderFunc(ri)(g);
         ct := ct + 1; # counter of loop, as long as no new larger degree was detected
         if o = 1 then
             continue;
@@ -1172,6 +1231,53 @@ RECOG.SnAnUpperBoundForDegree := function(ri)
     return N;
 end;
 
+RECOG.SnAnCacheUpperBoundForDegree := function(ri)
+    local cache, N, degreeData;
+    cache := RECOG.SnAnGetCache(ri);
+    if IsBound(cache.N) then
+        return;
+    fi;
+    N := RECOG.SnAnUpperBoundForDegree(ri);
+    cache.N := N;
+    if not IsInt(N) then
+        return;
+    fi;
+    # This is usually much smaller than RECOG.SnAnUpperBoundForDegree
+    if N > 20 then
+        degreeData := RECOG.GuessSnAnDegree(ri);
+        if degreeData = fail then
+            cache.N := TemporaryFailure;
+            return;
+        fi;
+        N := Minimum(N, degreeData.degree);
+        cache.N := N;
+    fi;
+end;
+
+# See RECOG.RecogniseSnAn. The difference is, that we give up at an earlier
+# point, i.e. we try out other recognition methods, before we continue.
+# In order to achieve this, we cache some important values for further
+# computations. It is the main function of SnAnUnknownDegree.
+RECOG.RecogniseSnAnLazy := function(ri)
+    local cache, N, tmp;
+    cache := RECOG.SnAnGetCache(ri);
+    RECOG.SnAnCacheUpperBoundForDegree(ri);
+    N := cache.N;
+    if N = TemporaryFailure then
+        RECOG.SnAnResetCache(ri);
+    fi;
+    if not IsInt(N) then
+        return N;
+    fi;
+    tmp := RECOG.RecogniseSnAnSingleIteration(ri, 1, N);
+    if tmp = TemporaryFailure then
+        RECOG.SnAnResetCache(ri);
+    elif tmp = SnAnTryLater then
+        tmp := TemporaryFailure;
+    fi;
+    return tmp;
+end;
+
 #! @BeginChunk SnAnUnknownDegree
 #! This method tries to determine whether the input group given by <A>ri</A> is
 #! isomorphic to a symmetric group Sn or alternating group An with
@@ -1195,27 +1301,9 @@ end;
 BindRecogMethod(FindHomMethodsGeneric, "SnAnUnknownDegree",
 "method groups isomorphic to Sn or An with n >= 9",
 function(ri, G)
-    local eps, N, degreeData, recogData, isoData, degree, swapSLP;
-    # if IsBound(ri!.fhmethsel) and not "SnAnSmallUnknownDegree"
-    #         in NamesOfComponents(ri!.fhmethsel.inapplicableMethods) then
-    #     ErrorNoReturn("If called via CallMethods then SnAnSmallUnknownDegree must be tried before ",
-    #                   "SnAnUnknownDegree.");
-    # fi;
-    eps := 1 / 10^2;
-    N := RECOG.SnAnUpperBoundForDegree(ri);
-    if not IsInt(N) then
-        return N;
-    fi;
-    # This is usually much smaller than RECOG.SnAnUpperBoundForDegree
-    if N > 20 then
-        degreeData := RECOG.GuessSnAnDegree(ri);
-        if degreeData = fail then
-            return TemporaryFailure;
-        fi;
-        N := Minimum(N, degreeData.degree);
-    fi;
+    local recogData, isoData, degree, swapSLP, t;
     # Try to find an isomorphism
-    recogData := RECOG.RecogniseSnAn(ri, eps, N);
+    recogData := RECOG.RecogniseSnAnLazy(ri);
     # RECOG.RecogniseSnAn returned NeverApplicable or TemporaryFailure
     if not IsRecord(recogData) then
         return recogData;
