@@ -18,7 +18,7 @@ SetPackageInfo( rec(
 
 PackageName := "recog",
 Subtitle := "A package for constructive recognition of permutation and matrix groups",
-Version := "1.4.2",
+Version := "1.4.3",
 Date := "27/09/2022", # dd/mm/yyyy format
 License := "GPL-3.0-or-later",
 
@@ -268,6 +268,7 @@ Dependencies := rec(
   GAP := ">=4.11",
   NeededOtherPackages := [
     ["AtlasRep", ">= 1.4.0"],
+    ["Alnuth", ">= 3.2.1"],
     ["FactInt", ">= 1.5.2"],
     ["Forms", ">= 1.2"],
     ["genss", ">= 1.3"],

@@ -36,7 +36,10 @@ BindGlobal( "GenerateRandomKernelElementsAndOptionallyVerifyThem",
     verificationSuccess := true;
     # We generate a random element of the kernel as the quotient of a random
     # element and the preimage of its image under the homomorphism.
+    Info(InfoRecog,3, "GenerateRandomKernelElementsAndOptionallyVerifyThem, n = ", n);
+
     for i in [1 .. n] do
+        Info(InfoRecog,3, "GenerateRandomKernelElementsAndOptionallyVerifyThem: ", i, " / ", n);
         # Finding kernel generators and immediate verification must use
         # different random elements! This is ensured by using the same stamp
         # in both situations.

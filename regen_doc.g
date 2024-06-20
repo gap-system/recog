@@ -69,9 +69,10 @@ ListOfUnusedMethods := function()
 end;
 
 GenerateMethodsTableXML := function(shortname, desc, db)
-local xmlfile, meth;
+local dir, xmlfile, meth;
 
-    xmlfile := Concatenation("doc/_methods_", shortname, "_table.xml");
+    dir := Filename(DirectoryCurrent(), "");
+    xmlfile := Concatenation(dir, "doc/_methods_", shortname, "_table.xml");
     xmlfile := OutputTextFile(xmlfile, false);
     SetPrintFormattingStatus(xmlfile, false);
 
@@ -99,7 +100,7 @@ end;
 GenerateUnusedMethodsTableXML := function()
     local xmlfile, meth;
 
-    xmlfile := "doc/_methods_unused_table.xml";
+    xmlfile := Filename(DirectoryCurrent(), "doc/_methods_unused_table.xml");
     xmlfile := OutputTextFile(xmlfile, false);
     SetPrintFormattingStatus(xmlfile, false);
 
@@ -123,9 +124,10 @@ GenerateUnusedMethodsTableXML := function()
 end;
 
 GenerateMethodsListXML := function(shortname, db)
-    local xmlfile, dbsWhichUseMethod, nrDbsWhichUseMethod, s, meth;
+    local dir, xmlfile, dbsWhichUseMethod, nrDbsWhichUseMethod, s, meth;
 
-    xmlfile := Concatenation("doc/_methods_", shortname, "_list.xml");
+    dir := Filename(DirectoryCurrent(), "");
+    xmlfile := Concatenation(dir, "doc/_methods_", shortname, "_list.xml");
     xmlfile := OutputTextFile(xmlfile, false);
     SetPrintFormattingStatus(xmlfile, false);
 
