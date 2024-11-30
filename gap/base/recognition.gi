@@ -883,9 +883,6 @@ InstallGlobalFunction( "GetCompositionTreeNode",
 # Testing:
 
 RECOG.TestGroupOptions := rec(
-      # Number of times to test whether the recognized size is right
-      sizeTests := 3,
-
       # Number of random elements in group to check
       # This is used both for the number of elements in the
       # group to check, and the number of random elements of
@@ -945,9 +942,6 @@ RECOG.TestGroup := function(g,proj,size, optionlist...)
           if count = -1 then
               return fail;
           fi;
-      else
-          #Print("Test was OK!\n");
-          count := 3;   # worked!
       fi;
   until count >= 3;
   #View(ri);
