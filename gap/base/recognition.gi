@@ -897,7 +897,7 @@ RECOG.TestGroupOptions := rec(
 
       # if the following is set to true, then we test what happens if  SLPforElement
       # is called with elements outside the group
-      tryNonGroupElements := false
+      tryNonGroupElements := true,
   );
 
 
