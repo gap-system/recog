@@ -29,6 +29,7 @@ scan_dirs := [
     "gap/base",
     "gap/generic",
     "gap/matrix",
+    "gap/matrix/wordsInNiceGens",
     "gap/perm",
     "gap/projective",
     "gap/projective/almostsimple",

@@ -27,6 +27,11 @@ ReadPackage("recog","gap/matrix.gd");
 
 ReadPackage("recog","gap/matrix/ppd.gd");
 ReadPackage("recog","gap/matrix/classical.gd");
+ReadPackage("recog","gap/matrix/wordsInNiceGens/BruhatDecomposition.gd");
+ReadPackage("recog","gap/matrix/wordsInNiceGens/BruhatDecompositionSL.gd");
+ReadPackage("recog","gap/matrix/wordsInNiceGens/BruhatDecompositionSU.gd");
+ReadPackage("recog","gap/matrix/wordsInNiceGens/BruhatDecompositionSp.gd");
+ReadPackage("recog","gap/matrix/wordsInNiceGens/BruhatDecompositionO.gd");
 ReadPackage("recog","gap/projective/almostsimple.gd");
 ReadPackage("recog","gap/projective/findnormal.gd");
 ReadPackage("recog","gap/projective/AnSnOnFDPM.gd");
