@@ -1,0 +1,53 @@
+TODO: where to put this?
+
+## A quick overview on how group recognition works
+
+The basic problem of constructive group recognition is the following: Given any g ∈ G, G = ⟨ X ⟩, we want to have a *straight line program* (SLP) from X to g, i.e. we want to solve the constructive membership problem.
+If g ∉ G (in the situation that G is naturally embedded into some bigger group), then the algorithm should fail. The problem is solved by constructing some nice generators and then writing an SLP from the nice generators to g and concatenating with an SLP from X to the nice generators. 
+The process is organised recursively along a composition tree for G, which is often called *recognition tree*.
+Below, we go into more details and distinguish between two cases: 
+1. The group that is supposed to be constructively recognised is (almost) simple, possibly modulo scalars, a so-called *leaf node*.
+2. The group that is supposed to be constructively recognised can be split (by some method involving a homomorphism), a so-called *splitting node*.
+
+By *constructively recognising* the group we mean that the isomorphism type of the group is known, i.e. it has a name (for example $M_{11}$ or $PSL_2(9)$), and that constructive membership is solved as explained above.
+
+TODO: For many more details see (e.g. the excellent survey article by Eamonn, Charles, et al).
+
+More terminology:
+A *recognition method* is a GAP function together with an agreement about what arguments it takes and what result it returns. 
+
+## A brief note on projective groups
+
+TODO: explain the concept... matrix group in $GL(d,p)$ + implicit notation of working "modulo scalars in $F_p^*$".
+
+## Input and return value for recognition methods
+
+In [recog], each recognition methods takes two arguments:
+1. a *recognition info record* `ri` and
+2. a GAP group `G`.
+
+The group `G` must be a GAP group object with generators, and it is usually a permutation group or a matrix group, possibly a projective group.
+The job of the recognition method is to constructively recognize the group `G`, and if succesful, add information about the group to `ri`.
+
+There are four possible return values for a recognition method. We point out that this might not be what is expected from a user perspective, but instead
+recog minimizes the amount of information provided.
+
+1. `Success`
+    - means that the method was successful and no more methods have to be tried.
+
+2. `NeverApplicable`
+    - means that the method was not successful and that there is no point to call the method again in this situation whatsoever.
+
+3. `TemporaryFailure`
+    - means that the method temporarily failed, that it however could be sensible to call it again in this situation at a later stage. This value is typical for a Las Vegas algorithm using randomised methods, which has failed, but which may succeed when called again.
+
+4. `NotEnoughInformation`
+    - means that the method for some reason refused to do its work. However, it is possible that it will become applicable later such that it makes sense to call it again, when maybe there is more information available.
+
+
+If the method happend to be successful, then it is also supposed to store additional information inside the recognition info record `ri`. We already described in general terms what that information is supposed to be from the perspective of a user of a recognition method. But when implementing a recognition method, this is slightly different; in particular, [recog] tries to minimize the amount of information that a recognition method *must* provide (see below) to the absolute minimum, and derives as much of the missing information as it can from the provided information.
+
+
+1. *leaf methods* constructively recognize leaf nodes of the composition tree; typically that would be (almost) simple groups, or groups which otherwise are "easy" to deal with;
+
+2. *splitting methods* construct a homomorphism $\phi:G\to H$, and thereby *split* the recognition task into recognizing $H$, and recognizing the kernel $N:=\ker(\phi)$.
