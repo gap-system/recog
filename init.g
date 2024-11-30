@@ -14,6 +14,7 @@
 ##
 #############################################################################
 
+MC_CNT := 0; IV_CNT := 0; BAL_CONST := 1;
 ReadPackage("recog","gap/base/hack.g");
 ReadPackage("recog","gap/base/methods.gd");
 ReadPackage("recog","gap/base/methsel.gd");

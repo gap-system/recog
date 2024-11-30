@@ -472,6 +472,23 @@ BindGlobal( "FindHomMethodsGeneric", rec() );
 ## <#/GAPDoc>
 BindGlobal( "SLPforElementFuncsGeneric", rec() );
 
+# TODO Document mandarins
+# Refer to overview paper by Baarnhielm, Holt, Charles, Eamonn, sections "5.2
+# The main algorithm" and "5.4 Crisis management".
+# Explain safe and unsafe nodes.
+# Explain in which situations a crisis can be evoked:
+# - only in a leaf: mandarin can't be written as SLPs in nice gens, this does
+#   not happen in non-leaf nodes
+# - mandarins can't be mapped under reduction homomorphism
+# - 
+# Note that when implementing verification via presentations, that can also
+# evoke crises. Then I'd make sense to remove the "MANDARIN_" prefix from the
+# name.
+# TODO Wait a second, if the generators of the root can be expressed as SLPs in
+# the nice gens, then the kernels must be correct, right?!
+BindGlobal("MANDARIN_CRISIS", MakeImmutable("MANDARIN_CRISIS"));
+BindGlobal("NUM_MANDARINS_DEFAULT_VALUE", 100);
+DeclareFilter( "IsSafeForMandarins" );
 
 # Our global functions for the main recursion:
 
