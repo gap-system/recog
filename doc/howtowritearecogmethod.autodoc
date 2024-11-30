@@ -86,9 +86,13 @@ Namely, many functions for objects with memory assume that, if the elements live
 Recall that splitting recognition methods produce an epimorphism $\phi:G\to H$
 and then delegate the work to the image $H$ and the kernel $N:=\ker(\phi)$.
 This means that now $N$ and $H$ have to be constructively recognized. Such a
-splitting recognition method only needs to provide a homomorphism, by calling
-`SetHomom(ri, hom);`. However, in practice one will want to provide additional
+splitting recognition method only needs to
+- provide a homomorphism, by calling
+`SetHomom(ri, hom);`, and
+- optionally update `methodsforimage`, if the representation changed.
+However, in practice one will want to provide additional
 data.
+
 
 We start with an example, similar to a method used in <Package>recog</Package>.
 This refers to permutation groups only!
