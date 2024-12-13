@@ -128,7 +128,7 @@ function(ri, G)
     InitialDataForKernelRecogNode(ri).blocks := blocks;
     AddMethod(InitialDataForKernelRecogNode(ri).hints, FindHomMethodsPerm.PcgsForBlocks, 400);
     AddMethod(InitialDataForKernelRecogNode(ri).hints, FindHomMethodsPerm.BalTreeForBlocks, 200);
-    findgensNmeth(ri).args[1] := Length(blocks)+3;
+    findgensNmeth(ri).args[1] := 2 * Length(blocks)+3;
     findgensNmeth(ri).args[2] := 5;
     return Success;
 end);
@@ -158,6 +158,11 @@ function(ri, G)
   return NeverApplicable;
 end);
 
+# This variable is used in BalTreeForBlocks to determine how many kernel
+# generators to compute with findgensNmeth(ri). It is temporarily set to zero
+# by the mandarin test suite to provoke lots of crises while recognising an
+# imprimitive permutation group.
+BindGlobal("RECOG_FactorForBalTreeForBlocks", 1);
 #! @BeginChunk BalTreeForBlocks
 #! This method creates a balanced composition tree for the kernel of an
 #! imprimitive group. This is guaranteed as the method is just called
@@ -192,8 +197,8 @@ function(ri, G)
   Setvalidatehomominput(ri, {ri,p} -> ForAll(o, x -> x^p in seto));
   SetHomom(ri,hom);
   Setimmediateverification(ri,true);
-  findgensNmeth(ri).args[1] := 3+cut;
-  findgensNmeth(ri).args[2] := 5;
+  findgensNmeth(ri).args[1] := 3 + RECOG_FactorForBalTreeForBlocks * cut;
+  findgensNmeth(ri).args[2] := 1;
   if nrblocks - cut > 1 then
       l := Length(upperhalf[1]);
       n := Length(upperhalf);
@@ -430,7 +435,7 @@ function(ri, G)
               return NeverApplicable;
           fi;
       fi;
-      o := MovedPoints(G);
+      o := Set(MovedPoints(G));
       hom := ActionHomomorphism(G,o);
       SetHomom(ri,hom);
       Setvalidatehomominput(ri, {ri,p} -> IsSubset(o, MovedPoints(p)));
