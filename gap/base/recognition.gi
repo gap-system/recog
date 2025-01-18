@@ -897,7 +897,7 @@ RECOG.TestGroupOptions := rec(
 
       # if the following is set to true, then we test what happens if  SLPforElement
       # is called with elements outside the group
-      tryNonGroupElements := false
+      tryNonGroupElements := true,
   );
 
 
@@ -906,7 +906,7 @@ RECOG.TestGroupOptions := rec(
 # 'optionlist' is an optional list of options overriding
 # RECOG.TestGroupOptions
 RECOG.TestGroup := function(g,proj,size, optionlist...)
-  local l,r,ri,s,x,count,lvl,seedMT,seedRS,gens,supergroup, options;
+  local l,r,ri,s,x,count,lvl,seedMT,seedRS,gens,res, options;
   count := 0;
   
   options := ShallowCopy(RECOG.TestGroupOptions);
@@ -982,38 +982,11 @@ RECOG.TestGroup := function(g,proj,size, optionlist...)
       fi;
   until count >= options.inTests;
 
-  if IsPermGroup(g) then
-    supergroup := SymmetricGroup(LargestMovedPoint(g) + 2);
-  elif IsMatrixGroup(g) then
-    supergroup := GL(DimensionOfMatrixGroup(g), DefaultFieldOfMatrixGroup(g));
-  else
-    supergroup := fail;
-  fi;
-
-  if supergroup <> fail and options.tryNonGroupElements then
-    count := 0;
-    repeat
-        count := count + 1;
-        #Print(".\c");
-        x := PseudoRandom(supergroup);
-        s := SLPforElement(ri,x);
-        if s <> fail and not isequal(ri)(ResultOfStraightLineProgram(s,l),x) then
-            Print("ALARM: set count to -1 to skip test!\n");
-            Print("group := ", g, ";\n");
-            Print("recogsize := ", Size(ri), ";\n");
-            Print("proj := ", proj, ";\n");
-            Print("x := ", x, ";\n");
-            Print("s := ", s, ";\n");
-            if s <> fail then
-                Print("result := ", ResultOfStraightLineProgram(s,l), ";\n");
-            fi;
-
-            Error("Alarm: SLPforElement did not work on (possibly) non-group element!\n");
-            if count = -1 then
-                return fail;
-            fi;
-        fi;
-    until count >= options.inTests;
+  if options.tryNonGroupElements then
+    res := RECOG.TryNonGroupElements(ri, options.inTests);
+    if res <> true then
+        return res;
+    fi;
   fi;
 
   #Print("\n30 random elements successfully sifted!\n");
@@ -1067,6 +1040,44 @@ RECOG.testAllSubgroups := function(g, options...)
     od;
 end;
 
+# Recurses over all nodes in the tree rooted in ri.
+# For each non-leaf node this function generates inTests random elements, which
+# probably are not in Grp(ri), and tests whether SLPforElement correctly
+# handles them.
+# If such a test fails, then this function returns the node and the random
+# element which caused the test to fail.
+# If all tests passed, then it returns true;
+RECOG.TryNonGroupElements := function(ri, inTests)
+    local G, niceGens, parentGroup, random, slp, resultOfSLP, i, res;
+    if IsLeaf(ri) or ri = fail then
+        return true;
+    fi;
+    G := Grp(ri);
+    niceGens := NiceGens(ri);
+    if IsPermGroup(G) then
+        parentGroup := SymmetricGroup(MovedPoints(G));
+    elif IsMatrixGroup(G) then
+        parentGroup := GL(DimensionOfMatrixGroup(G),
+                          DefaultFieldOfMatrixGroup(G));
+    else
+        ErrorNoReturn("Grp(ri) must be a permutation, a matrix or a",
+                      " projective group");
+    fi;
+    for i in [1 .. inTests] do
+        random := PseudoRandom(parentGroup);
+        slp := SLPforElement(ri, random);
+        if slp <> fail then
+            resultOfSLP := ResultOfStraightLineProgram(slp, niceGens);
+            if not isequal(ri)(resultOfSLP, random) then
+                Print("TryNonGroupElements: SLPforElement did not work!\n");
+                return [ri, random];
+            fi;
+        fi;
+    od;
+    res := RECOG.TryNonGroupElements(RIFac(ri), inTests);
+    if res <> true then return res; fi;
+    return RECOG.TryNonGroupElements(RIKer(ri), inTests);
+end;
 
 RECOG.TestRecognitionNode := function(ri,stop,recurse)
   local err, grp, x, slp, y, ef, ek, i;
